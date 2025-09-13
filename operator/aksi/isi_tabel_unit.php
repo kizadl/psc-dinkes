@@ -1,0 +1,104 @@
+<?php
+//error_reporting(0);
+include '../services/config.php';
+$dbconn = mysqli_connect($dbhost,$dbuser,$dbpass,$dbname)or die('Could not connect: '); 
+date_default_timezone_set('Asia/Jakarta');
+function tgl_indo($tgl){
+	$tanggal = substr($tgl,8,2);
+	$bulan = getBulan(substr($tgl,5,2));
+	$tahun = substr($tgl,2,2);
+	return $tanggal.' '.$bulan.' '.$tahun;		 
+}
+
+function getBulan($bln){
+	switch ($bln){
+		case 1: 
+			return "Jan";
+			break;
+		case 2:
+			return "Feb";
+			break;
+		case 3:
+			return "Mar";
+			break;
+		case 4:
+			return "Apr";
+			break;
+		case 5:
+			return "Mei";
+			break;
+		case 6:
+			return "Jun";
+			break;
+		case 7:
+			return "Jul";
+			break;
+		case 8:
+			return "Agu";
+			break;
+		case 9:
+			return "Sep";
+			break;
+		case 10:
+			return "Okt";
+			break;
+		case 11:
+			return "Nov";
+			break;
+		case 12:
+			return "Des";
+			break;
+	}
+} 
+
+$sqlx = ("SELECT p.id_trip,p.time_start,p.lokasi_start,p.time_end,p.lokasi_end,p.durasi,p.jt,p.use_bbm
+		FROM log_trip_unit p");
+		
+$result = mysqli_query($dbconn,$sqlx);
+$data = array();
+$no=0;
+while($t=mysqli_fetch_array($result)){
+	$no++;	
+	$idtrip=$t['id_trip'];
+
+	$qricbg = ("SELECT q.nm_gejala FROM detail_layanan p LEFT JOIN m_gejala q ON p.id_gejala=q.id_gejala WHERE p.id_layanan='".$idlayanan."'");
+	$dbcabang = mysqli_query($dbconn,$qricbg);
+	$nmdiagnosa = "";
+	while($c=mysqli_fetch_array($dbcabang)){
+		$nmdiagnosa.=$c['nm_gejala'].", ";
+	}
+
+	if ($t['jk']=="L"){$kelamin = "Laki-laki";} else {$kelamin = "Perempuan";}
+
+	if ($t['penanganan']==NULL){$penanganan = "";} else {$penanganan = $t['penanganan'];}
+	if ($t['stts_pasien']==NULL){$sttspasien = "";} else {$sttspasien = ucwords(strtolower($t['stts_pasien']));}
+	$row_array = array();
+	$row_array['idlayanan']=$idlayanan;
+	$row_array['no']=$no;
+
+	$row_array['nmpasien']=ucwords(strtolower($t['nm_pasien']));
+	$row_array['kelamin']=$kelamin;
+	$row_array['umur']=ucwords(strtolower($t['umur']));
+	$row_array['ketgawat']=ucwords(strtolower($t['ket_gawat']));
+
+	$row_array['nmpelapor']=ucwords(strtolower($t['nm_pelapor']));$row_array['telppelapor']=$t['telp_pelapor'];
+
+	$row_array['sttslayanan']=$t['stts_layanan'];
+
+	$row_array['tgllayanan']=tgl_indo($t['tgl_layanan']);
+	$row_array['jamlayanan']=date("H:i",strtotime($t['jam_layanan']));
+
+	$row_array['idugd']=$t['id_ugd'];
+	$row_array['idunit']=$t['id_unit'];
+	$row_array['idsdk']=$t['id_sdk'];
+	$row_array['nmugd']=$t['nm_ugd'];
+	$row_array['nmdiagnosa']=$nmdiagnosa;
+
+	$row_array['penanganan']=$penanganan;$row_array['sttspasien']=$sttspasien;
+	
+	array_push($data,$row_array);
+}
+echo json_encode($data);
+$result->close();
+$dbconn->close();
+?>  
